@@ -1,5 +1,11 @@
 #include "systemcalls.h"
 
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 /**
  * @param cmd the command to execute with system()
  * @return true if the command in @param cmd was executed
@@ -16,6 +22,10 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    int rc = system(cmd);
+    if (rc < 0 || rc == 127) {
+        return false;
+    }
 
     return true;
 }
@@ -58,6 +68,36 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    pid_t pid = fork();
+
+    if (pid < 0) { // error
+        return false;
+    } else if (pid == 0) { // child
+        // printf("child: running exec(%s, %s, %s ...)\n", command[0], command[1], command[2]);
+        int rc = execv(command[0], command);
+        if (rc == -1) {
+            // printf("child: exec returned %d\n", rc);
+            exit(rc);
+        }
+    }
+    // parent
+    int child_status = 0;
+    // printf("parent: waiting for child\n");
+    pid_t child_pid = wait(&child_status);
+    // printf("parent: wait returned. child_pid=%d, child_status=%d, WIFEXITED=%d, WEXITSTATUS=%d\n",
+    //     child_pid, child_status, WIFEXITED(child_status), WEXITSTATUS(child_status));
+    if (child_pid < 0) {
+        // printf("parent: wait returned negative child_pid");
+        return false;
+    }
+    if (!WIFEXITED(child_status)) {
+        // printf("parent: child didn't exit normally");
+        return false;
+    }
+    if (WEXITSTATUS(child_status)) {
+        // printf("parent: child has non-zero exit status %d", WEXITSTATUS(child_status));
+        return false;
+    }
 
     va_end(args);
 
@@ -92,7 +132,36 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
-
+    pid_t pid = fork();
+    if (pid < 0) {
+        return false;
+    } else if (pid == 0) { // child
+        int fd = open(outputfile, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+        if (fd < 0) {
+            return -1;
+        }
+        // redirecting stdout to fd by duplicating fd
+        if (dup2(fd, STDOUT_FILENO) < 0) {
+            return -1;
+        }
+        close(fd); 
+        if (execv(command[0], command) < 0) {
+            return -1;
+        }
+    }
+    // parent
+    int status = 0;
+    pid_t child_pid = wait(&status);
+    if (child_pid < 0) {
+        return false;
+    }
+    if (!WIFEXITED(status)) {
+        return false;
+    }
+    if (WEXITSTATUS(status)) {
+        return false;
+    }
+ 
     va_end(args);
 
     return true;
