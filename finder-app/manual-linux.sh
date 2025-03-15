@@ -100,22 +100,20 @@ sudo mknod -m 666 dev/null c 1 3
 sudo mknod -m 666 dev/console c 1 5
 
 # TODO: Clean and build the writer utility
-WRITER_DIR=~/coursera/linux_systems_programming/assignment-1-lorserker/finder-app
-
-cd $WRITER_DIR
+cd $FINDER_APP_DIR
 make clean
 make CROSS_COMPILE=${CROSS_COMPILE}
 cd ${OUTDIR}/rootfs
 
 # TODO: Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
-cp ${WRITER_DIR}/finder.sh home
-cp ${WRITER_DIR}/finder-test.sh home
-cp ${WRITER_DIR}/writer home
+cp ${FINDER_APP_DIR}/finder.sh home
+cp ${FINDER_APP_DIR}/finder-test.sh home
+cp ${FINDER_APP_DIR}/writer home
 mkdir home/conf
-cp ${WRITER_DIR}/conf/assignment.txt home/conf 
-cp ${WRITER_DIR}/conf/username.txt home/conf 
-cp ${WRITER_DIR}/autorun-qemu.sh home
+cp ${FINDER_APP_DIR}/conf/assignment.txt home/conf 
+cp ${FINDER_APP_DIR}/conf/username.txt home/conf 
+cp ${FINDER_APP_DIR}/autorun-qemu.sh home
 
 
 # TODO: Chown the root directory
